@@ -1,14 +1,34 @@
 #!/usr/bin/env python
 
+import os
+import os.path as pt
+
 from telegram.ext import Updater, CommandHandler, MessageHandler, filters
 import config
 
 def on_start(upd, ctx):
-    pass
+    message = ("Welcome to PDF Uniter.\n"
+               "To get started, simply send images that will be compiled into "
+               "a pdf in the order they are sent. Once completed, send /finish "
+               "to receive a pdf. In case of errors, send /cancel to restart.")
+    ctx.bot.send_message(upd.effective_chat.id, message)
 
 
 def on_img_received(upd, ctx):
-    pass
+    biggest_img = list(sorted(
+        upd.message.photo,
+        key=lambda photo: (photo.width, photo.height),
+        reverse=True
+    ))[0].get_file()
+    user_id = upd.effective_chat.id
+    os.makedirs(f"data/{user_id}", exist_ok=True)
+    existing_files = [int(i) for i in os.listdir(f"data/{user_id}")]
+    if existing_files:
+        new_name = max(existing_files) + 1
+    else:
+        new_name = 1
+    biggest_img.download(f"data/{user_id}/{new_name:04}")
+    ctx.bot.send_message(upd.effective_chat.id, f"Added image {new_name}")
 
 
 def on_finish(upd, ctx):
