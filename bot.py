@@ -2,6 +2,7 @@
 
 import os
 import os.path as pt
+import shutil
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, filters
 import config
@@ -36,7 +37,11 @@ def on_finish(upd, ctx):
 
 
 def on_cancel(upd, ctx):
-    pass
+    user_id = upd.effective_chat.id
+    path = f"data/{user_id}"
+    if pt.isdir(path):
+        shutil.rmtree(f"data/{user_id}")
+    ctx.bot.send_message(upd.effective_chat.id, f"Cleared images")
 
 
 updater = Updater(token=config.API_KEY, use_context=True)
