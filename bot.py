@@ -5,15 +5,20 @@ import os.path as pt
 import shutil
 import subprocess
 
+from telegram.parsemode import ParseMode as Parse
 from telegram.ext import Updater, CommandHandler, MessageHandler, filters
 import config
 
 def on_start(upd, ctx):
-    message = ("Welcome to PDF Uniter.\n"
-               "To get started, simply send images that will be compiled into "
-               "a pdf in the order they are sent. Once completed, send /finish "
-               "to receive a pdf. In case of errors, send /cancel to restart.")
-    ctx.bot.send_message(upd.effective_chat.id, message)
+    message = (
+        "<b>Welcome to PDF Uniter</b>\n\n"
+        "To get started, simply send images that will be compiled into a pdf "
+        "in the order they are sent.\n\n"
+        "- Once completed, send /finish to receive a pdf.\n"
+        "- To set a different filename, use <code>/finish filename.</code>\n"
+        "- In case of errors, send /cancel to restart.\n"
+    )
+    ctx.bot.send_message(upd.effective_chat.id, message, parse_mode=Parse.HTML)
 
 
 def on_img_received(upd, ctx):
@@ -47,8 +52,14 @@ def on_finish(upd, ctx):
     ))
     pdf_path = f"{path}/final.pdf"
     subprocess.run(["convert", *[path + "/" + file for file in files], pdf_path])
+
+    _, *filename = upd.message.text.split(" ")
+    if filename:
+        filename = " ".join(filename).rstrip(".pdf") + ".pdf"
+    else:
+        filename = "final.pdf"
     with open(pdf_path, "rb") as f:
-        ctx.bot.send_document(upd.effective_chat.id, f)
+        ctx.bot.send_document(upd.effective_chat.id, f, filename=filename)
     shutil.rmtree(path)
 
 
@@ -64,6 +75,7 @@ def on_cancel(upd, ctx):
 updater = Updater(token=config.API_KEY, use_context=True)
 dispatcher = updater.dispatcher
 dispatcher.add_handler(CommandHandler("start", on_start))
+dispatcher.add_handler(CommandHandler("help", on_start))
 dispatcher.add_handler(MessageHandler(filters.Filters.photo, on_img_received))
 dispatcher.add_handler(CommandHandler("finish", on_finish))
 dispatcher.add_handler(CommandHandler("cancel", on_cancel))
