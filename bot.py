@@ -3,6 +3,7 @@
 import os
 import os.path as pt
 import shutil
+import subprocess
 
 from telegram.ext import Updater, CommandHandler, MessageHandler, filters
 import config
@@ -33,7 +34,23 @@ def on_img_received(upd, ctx):
 
 
 def on_finish(upd, ctx):
-    pass
+    user_id = upd.effective_chat.id
+    path = f"data/{user_id}"
+    if not pt.isdir(path):
+        ctx.bot.send_message(upd.effective_chat.id, "No Images Available")
+        return
+
+    ctx.bot.send_message(upd.effective_chat.id, "Started Merging")
+    files = list(sorted(
+        os.listdir(path),
+        key=lambda file: int(file)
+    ))
+    pdf_path = f"{path}/final.pdf"
+    subprocess.run(["convert", *[path + "/" + file for file in files], pdf_path])
+    with open(pdf_path, "rb") as f:
+        ctx.bot.send_document(upd.effective_chat.id, f)
+    shutil.rmtree(path)
+
 
 
 def on_cancel(upd, ctx):
@@ -41,7 +58,7 @@ def on_cancel(upd, ctx):
     path = f"data/{user_id}"
     if pt.isdir(path):
         shutil.rmtree(f"data/{user_id}")
-    ctx.bot.send_message(upd.effective_chat.id, f"Cleared images")
+    ctx.bot.send_message(upd.effective_chat.id, "Cleared images")
 
 
 updater = Updater(token=config.API_KEY, use_context=True)
